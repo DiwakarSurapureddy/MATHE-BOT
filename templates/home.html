@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SolveMate AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+    <main class="layout">
+        <section class="card">
+            <div class="brand">
+                <div class="logo" aria-hidden="true"></div>
+                <div>
+                    <h1>SolveMate AI</h1>
+                    <p>Math-only assistant for fast, step-by-step solutions and final answers.</p>
+                </div>
+            </div>
+            <div class="helper" style="margin-top: 24px;">
+                <span>Solve equations</span>
+                <span>Derivatives</span>
+                <span>Integrals</span>
+                <span>Word problems</span>
+            </div>
+            <p style="margin-top: 22px; color: var(--text-2); line-height: 1.6;">
+                Type a math problem, press Enter, and SolveMate AI will respond
+                Your chat history stays in this session while you work.
+            </p>
+        </section>
+
+        <section class="card chat-window">
+            <div id="messages" class="messages"></div>
+
+            <form id="chat-form" class="composer">
+                <textarea id="user-input" placeholder="Ask a math problem (e.g., Solve 2x + 5 = 17)..." rows="2"></textarea>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="suggest-btn">Suggest</button>
+                    <button type="submit">Send</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        const form = document.getElementById("chat-form");
+        const input = document.getElementById("user-input");
+        const chatBox = document.getElementById("messages");
+        const suggestBtn = document.getElementById("suggest-btn");
+
+        function addMessage(role, text) {
+            const bubble = document.createElement("div");
+            bubble.className = `message ${role}`;
+            if (role === "bot") {
+                const tag = document.createElement("span");
+                tag.className = "tag";
+                tag.textContent = "SolveMate AI";
+                bubble.appendChild(tag);
+            }
+            bubble.appendChild(document.createTextNode(text));
+            chatBox.appendChild(bubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendMessage(message) {
+            addMessage("user", message);
+            input.value = "";
+
+            const typing = document.createElement("div");
+            typing.className = "message bot";
+            typing.innerHTML = '<span class="tag">SolveMate AI</span>Typing...';
+            chatBox.appendChild(typing);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message }),
+                });
+                const data = await response.json();
+                typing.remove();
+
+                if (!response.ok) {
+                    const errorText = data && (data.details || data.error) ? (data.details || data.error) : "Something went wrong.";
+                    addMessage("bot", `Error: ${errorText}`);
+                    return;
+                }
+
+                if (!data.reply) {
+                    addMessage("bot", `I could not generate a response. Debug: ${JSON.stringify(data)}`);
+                    return;
+                }
+
+                addMessage("bot", data.reply);
+            } catch (error) {
+                typing.remove();
+                addMessage("bot", `Network error: ${error.message || error}`);
+            }
+        }
+
+        function addEmptyState() {
+            const bubble = document.createElement("div");
+            bubble.className = "message bot";
+            const tag = document.createElement("span");
+            tag.className = "tag";
+            tag.textContent = "SolveMate AI";
+            bubble.appendChild(tag);
+            bubble.appendChild(
+                document.createTextNode("No history yet. Start with a math problem to see messages here.")
+            );
+            chatBox.appendChild(bubble);
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch("/history");
+                if (!response.ok) {
+                    addEmptyState();
+                    return;
+                }
+                const data = await response.json();
+                const history = data && Array.isArray(data.messages) ? data.messages : [];
+                chatBox.innerHTML = "";
+                if (history.length === 0) {
+                    addEmptyState();
+                    return;
+                }
+                history.forEach((item) => {
+                    const role = item.role === "user" ? "user" : "bot";
+                    addMessage(role, item.text || "");
+                });
+            } catch (error) {
+                chatBox.innerHTML = "";
+                addEmptyState();
+            }
+        }
+
+        suggestBtn.addEventListener("click", async () => {
+            try {
+                const response = await fetch("/suggest");
+                const data = await response.json();
+                if (response.ok && data.suggestion) {
+                    input.value = data.suggestion;
+                    input.focus();
+                } else {
+                    alert("Could not get a suggestion. Try again.");
+                }
+            } catch (error) {
+                alert("Network error. Please try again.");
+            }
+        });
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+            sendMessage(text);
+        });
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                form.dispatchEvent(new Event("submit"));
+            }
+        });
+
+        loadHistory();
+    </script>
+</body>
+</html>
