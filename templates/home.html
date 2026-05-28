@@ -6,37 +6,613 @@
     <title>SolveMate AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="static/style.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Dark Theme (Default) */
+        body {
+            --bg-primary: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            --bg-card: rgba(15, 12, 41, 0.7);
+            --border-color: rgba(0, 255, 136, 0.2);
+            --accent-color: #00ff88;
+            --accent-dark: #00cc6f;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --shadow-color: rgba(0, 255, 136, 0.1);
+            --input-bg: rgba(255, 255, 255, 0.05);
+
+            background: var(--bg-primary);
+            min-height: 100vh;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Light Theme */
+        body.light-mode {
+            --bg-primary: linear-gradient(135deg, #f5f5f5, #e8e8e8, #f0f0f0);
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --border-color: rgba(0, 180, 100, 0.3);
+            --accent-color: #00b366;
+            --accent-dark: #008c4d;
+            --text-primary: #1a1a1a;
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --shadow-color: rgba(0, 180, 100, 0.08);
+            --input-bg: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Math Background Operations */
+        .math-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .math-item {
+            position: absolute;
+            font-family: 'IBM Plex Mono', monospace;
+            opacity: 0.08;
+            font-size: 14px;
+            color: var(--accent-color);
+            animation: float 20s infinite ease-in-out;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        body.light-mode .math-item {
+            color: var(--accent-color);
+            opacity: 0.05;
+        }
+
+        .math-item.top-left { top: 10%; left: 5%; animation-delay: 0s; }
+        .math-item.top-right { top: 15%; right: 5%; animation-delay: 2s; }
+        .math-item.bottom-left { bottom: 10%; left: 5%; animation-delay: 4s; }
+        .math-item.bottom-right { bottom: 15%; right: 5%; animation-delay: 6s; }
+        .math-item.middle-left { top: 50%; left: 2%; animation-delay: 1s; }
+        .math-item.middle-right { top: 50%; right: 2%; animation-delay: 3s; }
+        .math-item.top-center { top: 5%; left: 50%; transform: translateX(-50%); animation-delay: 5s; }
+        .math-item.bottom-center { bottom: 5%; left: 50%; transform: translateX(-50%); animation-delay: 7s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-20px) translateX(10px); }
+        }
+
+        .layout {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 20px;
+            padding: 80px 20px 20px 20px;
+            height: calc(100vh - 80px);
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px var(--shadow-color);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            color: var(--text-primary);
+        }
+
+        /* Top Navigation Bar */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px var(--shadow-color);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .top-bar-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-color);
+            letter-spacing: 1px;
+        }
+
+        .top-bar-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--accent-color);
+            font-size: 20px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 255, 136, 0.15);
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+        }
+
+        body.light-mode .control-btn:hover {
+            background: rgba(0, 180, 100, 0.15);
+        }
+
+        /* Brand card - fixed to top-left */
+        .brand-card {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 280px;
+            max-height: calc(100vh - 40px);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00ff88, #00cc6f);
+            border-radius: 8px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: #0f0c29;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .brand h1 {
+            font-size: 22px;
+            color: #00ff88;
+            margin-bottom: 6px;
+        }
+
+        .brand p {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.3;
+        }
+
+        /* History Section */
+        .history-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .history-section h3 {
+            font-size: 14px;
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+
+        #history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.15);
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item:hover {
+            background: rgba(0, 255, 136, 0.15);
+            border-color: rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+        }
+
+        /* Chat window - FULL HEIGHT */
+        .chat-window {
+            margin-left: 10px;
+            margin-top: 20px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: calc(100vw - 320px);
+            max-width: none;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 136, 0.3);
+            border-radius: 3px;
+        }
+
+        .messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 136, 0.5);
+        }
+
+        .message {
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            word-wrap: break-word;
+            max-width: 80%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: rgba(0, 255, 136, 0.15);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            margin-right: 0;
+        }
+
+        .message.bot {
+            background: rgba(100, 150, 255, 0.1);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .tag {
+            display: block;
+            font-size: 12px;
+            color: #00ff88;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .composer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-top: 1px solid rgba(0, 255, 136, 0.2);
+            padding-top: 16px;
+        }
+
+        textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            color: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            resize: none;
+            font-size: 14px;
+        }
+
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #00ff88, #00cc6f);
+            color: #0f0c29;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 255, 136, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .step-box {
+            margin: 10px 0;
+            padding: 8px;
+            border-left: 3px solid #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .final-answer-box {
+            margin: 15px 0;
+            padding: 12px;
+            background: linear-gradient(135deg, #00ff88, #00cc6f);
+            color: #0f0c29;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        @media (max-width: 1024px) {
+            .layout {
+                padding: 10px;
+                flex-direction: column;
+            }
+
+            .brand-card {
+                position: relative;
+                top: 0;
+                left: 0;
+                width: 100%;
+                max-height: auto;
+                margin-bottom: 10px;
+            }
+
+            .chat-window {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+                height: auto;
+                min-height: 400px;
+            }
+
+            .message {
+                max-width: 95%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+
+            .layout {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .brand-card {
+                width: 100%;
+                max-height: auto;
+                position: relative;
+            }
+
+            .brand h1 {
+                font-size: 20px;
+            }
+
+            .brand p {
+                font-size: 10px;
+            }
+
+            .logo {
+                width: 45px;
+                height: 45px;
+                font-size: 24px;
+            }
+
+            .chat-window {
+                width: 100%;
+                margin: 10px 0;
+                height: auto;
+                min-height: 350px;
+            }
+
+            textarea {
+                font-size: 13px;
+            }
+
+            button {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .message {
+                max-width: 90%;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .layout {
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .brand-card {
+                width: 100%;
+            }
+
+            .brand {
+                gap: 12px;
+            }
+
+            .logo {
+                width: 40px;
+                height: 40px;
+                font-size: 22px;
+            }
+
+            .brand h1 {
+                font-size: 18px;
+            }
+
+            .brand p {
+                font-size: 9px;
+            }
+
+            .helper span {
+                font-size: 9px;
+                padding: 2px 4px;
+            }
+
+            .chat-window {
+                width: 100%;
+                min-height: 300px;
+            }
+
+            .composer {
+                gap: 8px;
+            }
+
+            textarea {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            button {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .message {
+                max-width: 85%;
+                font-size: 12px;
+                padding: 8px 10px;
+            }
+
+            .tag {
+                font-size: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- Math Background Operations -->
+    <div class="math-background">
+        <!-- Basic Operations -->
+        <div class="math-item top-left">∫ x² dx</div>
+        <div class="math-item top-right">∑ n=1^∞</div>
+        <div class="math-item bottom-left">√(a² + b²)</div>
+        <div class="math-item bottom-right">lim x→0</div>
+        
+        <!-- Calculus -->
+        <div class="math-item middle-left">d/dx f(x)</div>
+        <div class="math-item middle-right">e^(iπ) + 1 = 0</div>
+        
+        <!-- Constants -->
+        <div class="math-item top-center">π ≈ 3.14159</div>
+        <div class="math-item bottom-center">φ = (1+√5)/2</div>
+        
+        <!-- Partial Derivatives & Vector -->
+        <div class="math-item" style="top: 25%; left: 15%;">∂f/∂x</div>
+        <div class="math-item" style="top: 35%; right: 10%;">∇·F</div>
+        
+        <!-- Trigonometric Functions -->
+        <div class="math-item" style="top: 20%; left: 40%;">sin(θ)</div>
+        <div class="math-item" style="top: 30%; right: 20%;">cos(θ)</div>
+        <div class="math-item" style="bottom: 20%; left: 35%;">tan(θ)</div>
+        <div class="math-item" style="bottom: 25%; right: 18%;">cot(θ)</div>
+        
+        <!-- More Trig -->
+        <div class="math-item" style="top: 45%; left: 25%;">sec(θ)</div>
+        <div class="math-item" style="top: 50%; right: 30%;">csc(θ)</div>
+        
+        <!-- Trigonometric Identities -->
+        <div class="math-item" style="top: 60%; left: 12%;">sin²θ + cos²θ = 1</div>
+        <div class="math-item" style="top: 65%; right: 15%;">1 + tan²θ = sec²θ</div>
+        
+        <!-- Complex Numbers & More -->
+        <div class="math-item" style="top: 70%; left: 8%;">∞</div>
+        <div class="math-item" style="top: 60%; right: 5%;">i² = -1</div>
+        
+        <!-- Integrals & Summations -->
+        <div class="math-item" style="bottom: 25%; left: 20%;">∮</div>
+        <div class="math-item" style="bottom: 30%; right: 15%;">λ</div>
+        
+        <!-- Inverse Trig Functions -->
+        <div class="math-item" style="top: 15%; left: 70%;">arcsin(x)</div>
+        <div class="math-item" style="bottom: 15%; left: 70%;">arccos(x)</div>
+        <div class="math-item" style="top: 40%; left: 85%;">arctan(x)</div>
+        
+        <!-- Hyperbolic Functions -->
+        <div class="math-item" style="top: 75%; left: 45%;">sinh(x)</div>
+        <div class="math-item" style="top: 80%; right: 40%;">cosh(x)</div>
+        <div class="math-item" style="bottom: 10%; left: 50%;">tanh(x)</div>
+    </div>
+
     <main class="layout">
-        <section class="card">
+        <!-- Brand Card - Fixed to Top-Left -->
+        <section class="card brand-card">
             <div class="brand">
-                <div class="logo" aria-hidden="true"></div>
+                <div class="logo" aria-hidden="true">∑</div>
                 <div>
                     <h1>SolveMate AI</h1>
                     <p>Math-only assistant for fast, step-by-step solutions and final answers.</p>
                 </div>
             </div>
-            <div class="helper" style="margin-top: 24px;">
-                <span>Solve equations</span>
-                <span>Derivatives</span>
-                <span>Integrals</span>
-                <span>Word problems</span>
+            
+            <!-- Chat History Section -->
+            <div class="history-section">
+                <h3>📜 Chat History</h3>
+                <div id="history-list"></div>
             </div>
-            <p style="margin-top: 22px; color: var(--text-2); line-height: 1.6;">
-                Type a math problem, press Enter, and SolveMate AI will respond
-                Your chat history stays in this session while you work.
-            </p>
         </section>
 
+        <!-- Chat Window - Large and Full Height -->
         <section class="card chat-window">
             <div id="messages" class="messages"></div>
 
             <form id="chat-form" class="composer">
-                <textarea id="user-input" placeholder="Ask a math problem (e.g., Solve 2x + 5 = 17)..." rows="2"></textarea>
-                <div style="display: flex; gap: 8px;">
-                    <button type="button" id="suggest-btn">Suggest</button>
-                    <button type="submit">Send</button>
+                <textarea id="user-input" placeholder="Ask a math problem (e.g., Solve 2x + 5 = 17)..." rows="3"></textarea>
+                <div class="button-group">
+                    <button type="button" id="suggest-btn">💡 Suggest</button>
+                    <button type="submit">📤 Send</button>
                 </div>
             </form>
         </section>
@@ -51,13 +627,48 @@
         function addMessage(role, text) {
             const bubble = document.createElement("div");
             bubble.className = `message ${role}`;
+            
             if (role === "bot") {
                 const tag = document.createElement("span");
                 tag.className = "tag";
                 tag.textContent = "SolveMate AI";
                 bubble.appendChild(tag);
             }
-            bubble.appendChild(document.createTextNode(text));
+            
+            // Format step-by-step responses
+            if (role === "bot" && text.includes("STEP")) {
+                const steps = text.split(/STEP \d+:/);
+                steps.forEach((step, index) => {
+                    if (step.trim()) {
+                        const stepDiv = document.createElement("div");
+                        stepDiv.className = "step-box";
+                        stepDiv.innerHTML = `<strong>STEP ${index}:</strong>${step}`;
+                        bubble.appendChild(stepDiv);
+                    }
+                });
+            } else if (role === "bot" && text.includes("FINAL ANSWER")) {
+                const parts = text.split("FINAL ANSWER:");
+                if (parts[0]) {
+                    bubble.appendChild(document.createTextNode(parts[0]));
+                }
+                if (parts[1]) {
+                    const finalDiv = document.createElement("div");
+                    finalDiv.className = "final-answer-box";
+                    
+                    // Clean up the final answer text
+                    let cleanAnswer = parts[1].trim()
+                        .replace(/\$/g, '')
+                        .replace(/\\boxed\{/g, '')
+                        .replace(/\}/g, '')
+                        .trim();
+                    
+                    finalDiv.textContent = "FINAL ANSWER: " + cleanAnswer;
+                    bubble.appendChild(finalDiv);
+                }
+            } else {
+                bubble.appendChild(document.createTextNode(text));
+            }
+            
             chatBox.appendChild(bubble);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
@@ -88,7 +699,7 @@
                 }
 
                 if (!data.reply) {
-                    addMessage("bot", `I could not generate a response. Debug: ${JSON.stringify(data)}`);
+                    addMessage("bot", "I could not generate a response.");
                     return;
                 }
 
@@ -107,33 +718,59 @@
             tag.textContent = "SolveMate AI";
             bubble.appendChild(tag);
             bubble.appendChild(
-                document.createTextNode("No history yet. Start with a math problem to see messages here.")
+                document.createTextNode("The assistant is ready to solve your math problems!\nHit send to get started.")
             );
             chatBox.appendChild(bubble);
         }
 
-        async function loadHistory() {
+        async function loadHistoryItems() {
             try {
                 const response = await fetch("/history");
-                if (!response.ok) {
-                    addEmptyState();
-                    return;
-                }
+                if (!response.ok) return;
                 const data = await response.json();
-                const history = data && Array.isArray(data.messages) ? data.messages : [];
-                chatBox.innerHTML = "";
+                const history = data && Array.isArray(data) ? data : [];
+                const historyList = document.getElementById("history-list");
+                historyList.innerHTML = "";
+                
                 if (history.length === 0) {
-                    addEmptyState();
+                    historyList.innerHTML = '<p style="font-size: 11px; color: rgba(255, 255, 255, 0.5); text-align: center; padding: 10px;">No chat history yet</p>';
                     return;
                 }
-                history.forEach((item) => {
-                    const role = item.role === "user" ? "user" : "bot";
-                    addMessage(role, item.text || "");
+                
+                history.forEach((item, index) => {
+                    const itemDiv = document.createElement("div");
+                    itemDiv.className = "history-item";
+                    const userText = item.user || (item.text || "");
+                    const preview = userText.substring(0, 35) + (userText.length > 35 ? "..." : "");
+                    
+                    itemDiv.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span title="${userText}">📌 ${preview}</span>
+                            <button class="delete-history-btn" data-index="${index}" onclick="deleteHistoryItem(event, ${index})" style="background: none; border: none; color: #ff4444; cursor: pointer; font-size: 12px; padding: 0 4px;">🗑️</button>
+                        </div>
+                    `;
+                    historyList.appendChild(itemDiv);
                 });
             } catch (error) {
-                chatBox.innerHTML = "";
-                addEmptyState();
+                console.error("Error loading history:", error);
             }
+        }
+
+        async function deleteHistoryItem(event, index) {
+            event.stopPropagation();
+            try {
+                const response = await fetch(`/delete-history/${index}`, { method: "DELETE" });
+                if (response.ok) {
+                    loadHistoryItems();
+                }
+            } catch (error) {
+                console.error("Error deleting history:", error);
+            }
+        }
+
+        function loadHistory() {
+            addEmptyState();
+            loadHistoryItems();
         }
 
         suggestBtn.addEventListener("click", async () => {
